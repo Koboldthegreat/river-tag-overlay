@@ -808,6 +808,12 @@ int main (int argc, char *argv[])
 			return EXIT_FAILURE;
 	}
 
+	if ( 2 * square_inner_padding >= 0.9 * square_size )
+	{ 
+		fputs("ERROR: Inner square padding too large for square size.\n", stderr);
+		return EXIT_FAILURE;
+	}
+
 	surface_width = (tag_amount * (square_size + square_padding)) + square_padding + (2 * border_width);
 	surface_height = square_size + (2 * square_padding) + (2 * border_width);
 
