@@ -272,6 +272,56 @@ static pixman_color_t pixman_colour_from_rgba (double _r, double _g, double _b, 
 	};
 }
 
+static void bordered_rectangle (pixman_image_t *image, uint32_t x, uint32_t y,
+		uint32_t width, uint32_t height, uint32_t border, uint32_t scale,
+		pixman_color_t *background_colour, pixman_color_t *border_colour)
+{
+	x *= scale, y *= scale, width *= scale, height *= scale, border *= scale;
+
+	pixman_image_fill_rectangles(PIXMAN_OP_SRC, image, background_colour,
+			1, &(pixman_rectangle16_t){
+				(int16_t)x,
+				(int16_t)y,
+				(uint16_t)width,
+				(uint16_t)height,
+			});
+
+	pixman_image_fill_rectangles(PIXMAN_OP_SRC, image, border_colour,
+			4, (pixman_rectangle16_t[]){
+				/* Top */
+				{
+					(int16_t)x,
+					(int16_t)y,
+					(uint16_t)width,
+					(uint16_t)border,
+				},
+
+				/* Bottom */
+				{
+					(int16_t)x,
+					(int16_t)(y + height - border),
+					(uint16_t)width,
+					(uint16_t)border,
+				},
+
+				/* Left */
+				{
+					(int16_t)x,
+					(int16_t)(y + border),
+					(uint16_t)border,
+					(uint16_t)(height - 2 * border),
+				},
+
+				/* Right */
+				{
+					(int16_t)(x + width - border),
+					(int16_t)(y + border),
+					(uint16_t)border,
+					(uint16_t)(height - 2 * border),
+				},
+			});
+}
+
 static void render_frame (struct Output *output)
 {
 	struct Surface *surface = output->surface;
@@ -284,25 +334,10 @@ static void render_frame (struct Output *output)
 	if ( buffer == NULL )
 		return;
 
-	/* Background. */
 	pixman_color_t background_colour = pixman_colour_from_rgba(0.4, 0.4, 0.4, 1.0);
-	pixman_image_fill_rectangles(PIXMAN_OP_SRC, buffer->pixman_image, &background_colour,
-			1, &(pixman_rectangle16_t){
-				0,
-				0,
-				(uint16_t)(buffer->width * output->scale),
-				(uint16_t)(buffer->height * output->scale)
-			});
-
-	/* Borders. */
 	pixman_color_t border_colour = pixman_colour_from_rgba(0.2, 0.2, 0.2, 1.0);
-	pixman_image_fill_rectangles(PIXMAN_OP_SRC, buffer->pixman_image, &border_colour,
-			4, (pixman_rectangle16_t[]){
-				{ 0, 0, (uint16_t)(buffer->width * output->scale), (uint16_t)(border_width * output->scale) },
-				{ 0, (int16_t)(border_width * output->scale), (uint16_t)(border_width * output->scale), (uint16_t)((buffer->height - (2 * border_width)) * output->scale) },
-				{ (int16_t)((buffer->width - border_width) * output->scale), (int16_t)(border_width * output->scale), (uint16_t)(border_width * output->scale), (uint16_t)((buffer->height - (2 * border_width)) * output->scale) },
-				{ 0, (int16_t)((buffer->height - border_width) * output->scale), (uint16_t)(buffer->width * output->scale), (uint16_t)(border_width * output->scale) }
-			});
+	bordered_rectangle(buffer->pixman_image, 0, 0, buffer->width, buffer->height,
+			border_width, output->scale, &background_colour, &border_colour);
 
 	/* Tags. */
 	#define TAG_ON(A, B) ( A & 1 << B )
