@@ -677,7 +677,7 @@ int main (int argc, char *argv[])
 	};
 
 	static struct option opts[] = {
-		{ "help",                              required_argument, NULL, 'h'                               },
+		{ "help",                              no_argument,       NULL, 'h'                               },
 		{ "border-width",                      required_argument, NULL, BORDER_WIDTH                      },
 		{ "tag-amount",                        required_argument, NULL, TAG_AMOUNT                        },
 		{ "square-size",                       required_argument, NULL, SQUARE_SIZE                       },
