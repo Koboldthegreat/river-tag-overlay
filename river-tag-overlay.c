@@ -437,7 +437,10 @@ static void river_status_handle_view_tags (void *data, struct zriver_output_stat
 	output->view_tags = 0;
 	wl_array_for_each(i, tags)
 		output->view_tags |= *i;
-	update_surface(output);
+
+	/* Only update the popup if it is already active. */
+	if ( output->surface != NULL )
+		update_surface(output);
 }
 
 static const struct zriver_output_status_v1_listener river_status_listener = {
