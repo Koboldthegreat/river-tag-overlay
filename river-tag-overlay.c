@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <getopt.h>
 #include <pixman.h>
 #include <poll.h>
 #include <stdbool.h>
@@ -16,6 +17,24 @@
 
 #include "river-status-unstable-v1.h"
 #include "wlr-layer-shell-unstable-v1.h"
+
+const char usage[] =
+	"Usage: river-tag-overlay [options...]\n"
+	"   --border-width                      <int>   Width of the widget border\n"
+	"   --tag-amount                        <int>   Amount of displayed tags (1 to 32)\n"
+	"   --square-size                       <int>   Size of tag squares\n"
+	"   --square-inner-padding              <int>   Padding around the tag occupied indicator\n"
+	"   --square-padding                    <int>   Padding around tag squares\n"
+	"   --square-border-width               <int>   Border width of the tag squares\n"
+	"   --background-colour                 <hex>   Widget background colour\n"
+	"   --border-colour                     <hex>   Widget border colour\n"
+	"   --square-active-background-colour   <hex>   Background colour of active tag squares\n"
+	"   --square-active-border-colour       <hex>   Border colour of active tag squares\n"
+	"   --square-active-occupied-colour     <hex>   Occupied indicator colour of active tag squares\n"
+	"   --square-inactive-background-colour <hex>   Background colour of inactive tag squares\n"
+	"   --square-inactive-border-colour     <hex>   Border colour of inactive tag squares\n"
+	"   --square-inactive-occupied-colour   <hex>   Occupied indicator colour of inactive tag squares\n"
+	"\n";
 
 struct Buffer
 {
@@ -614,7 +633,10 @@ static bool colour_from_hex (pixman_color_t *colour, const char *hex)
 
 	if ( 4 != sscanf(hex, "0x%02hx%02hx%02hx%02hx", &r, &g, &b, &a)
 			&& 3 != sscanf(hex, "0x%02hx%02hx%02hx", &r, &g, &b) )
+	{
+		fprintf(stderr, "ERROR: Invalid colour: %s\n", hex);
 		return false;
+	}
 
 	colour->alpha = (uint16_t)(((double)a / 255.0) * 65535.0);
 	colour->red   = (uint16_t)((((double)r / 255.0) * 65535.0) * colour->alpha / 0xffff);
@@ -626,11 +648,7 @@ static bool colour_from_hex (pixman_color_t *colour, const char *hex)
 
 int main (int argc, char *argv[])
 {
-	// TODO handle opts
-
-	surface_width = (tag_amount * (square_size + square_padding)) + square_padding + (2 * border_width);
-	surface_height = square_size + (2 * square_padding) + (2 * border_width);
-
+	/* Default colours.*/
 	colour_from_hex(&background_colour, "0x666666");
 	colour_from_hex(&border_colour, "0x333333");
 	colour_from_hex(&inactive_square_background_colour, "0x999999");
@@ -639,6 +657,159 @@ int main (int argc, char *argv[])
 	colour_from_hex(&active_square_border_colour, "0xB24C21");
 	colour_from_hex(&inactive_square_occupied_colour, "0xCCCCCC");
 	colour_from_hex(&active_square_occupied_colour, "0xFFB277");
+
+	enum
+	{
+		BORDER_WIDTH,
+		TAG_AMOUNT,
+		SQUARE_SIZE,
+		SQUARE_INNER_PADDING,
+		SQUARE_PADDING,
+		SQUARE_BORDER_WIDTH,
+		BACKGROUND_COLOUR,
+		BORDER_COLOUR,
+		SQUARE_ACTIVE_BACKGROUND_COLOUR,
+		SQUARE_ACTIVE_BORDER_COLOUR,
+		SQUARE_ACTIVE_OCCUPIED_COLOUR,
+		SQUARE_INACTIVE_BACKGROUND_COLOUR,
+		SQUARE_INACTIVE_BORDER_COLOUR,
+		SQUARE_INACTIVE_OCCUPIED_COLOUR,
+	};
+
+	static struct option opts[] = {
+		{ "help",                              required_argument, NULL, 'h'                               },
+		{ "border-width",                      required_argument, NULL, BORDER_WIDTH                      },
+		{ "tag-amount",                        required_argument, NULL, TAG_AMOUNT                        },
+		{ "square-size",                       required_argument, NULL, SQUARE_SIZE                       },
+		{ "square-inner-padding",              required_argument, NULL, SQUARE_INNER_PADDING              },
+		{ "square-padding",                    required_argument, NULL, SQUARE_PADDING                    },
+		{ "square-border-width",               required_argument, NULL, SQUARE_BORDER_WIDTH               },
+		{ "background-colour",                 required_argument, NULL, BACKGROUND_COLOUR                 },
+		{ "border-colour",                     required_argument, NULL, BORDER_COLOUR                     },
+		{ "square-active-background-colour",   required_argument, NULL, SQUARE_ACTIVE_BACKGROUND_COLOUR   },
+		{ "square-active-border-colour",       required_argument, NULL, SQUARE_ACTIVE_BORDER_COLOUR       },
+		{ "square-active-occupied-colour",     required_argument, NULL, SQUARE_ACTIVE_OCCUPIED_COLOUR     },
+		{ "square-inactive-background-colour", required_argument, NULL, SQUARE_INACTIVE_BACKGROUND_COLOUR },
+		{ "square-inactive-border-colour",     required_argument, NULL, SQUARE_INACTIVE_BORDER_COLOUR     },
+		{ "square-inactive-occupied-colour",   required_argument, NULL, SQUARE_INACTIVE_OCCUPIED_COLOUR   },
+	};
+
+	int opt;
+	extern int optind;
+	extern char *optarg;
+	int32_t tmp;
+	while ( (opt = getopt_long(argc, argv, "h", opts, &optind)) != -1 ) switch (opt)
+	{
+		case 'h':
+			fputs(usage, stderr);
+			return EXIT_SUCCESS;
+
+		case BORDER_WIDTH:
+			tmp = atoi(optarg);
+			if ( tmp < 0 )
+			{
+				fputs("ERROR: Border width may not be smaller than 0.\n", stderr);
+				return EXIT_FAILURE;
+			}
+			border_width = (uint32_t)tmp;
+			break;
+
+		case TAG_AMOUNT:
+			tmp = atoi(optarg);
+			if ( tmp < 1 || tmp > 32 )
+			{
+				fputs("ERROR: Can only display between 1 and 32 tags.\n", stderr);
+				return EXIT_FAILURE;
+			}
+			tag_amount = (uint32_t)tmp;
+			break;
+
+		case SQUARE_SIZE:
+			tmp = atoi(optarg);
+			if ( tmp < 10 )
+			{
+				fputs("ERROR: Square size may not be smaller than 10.\n", stderr);
+				return EXIT_FAILURE;
+			}
+			square_size = (uint32_t)tmp;
+			break;
+
+		case SQUARE_INNER_PADDING:
+			tmp = atoi(optarg);
+			if ( tmp < 0 )
+			{
+				fputs("ERROR: Square inner padding may not be smaller than 0.\n", stderr);
+				return EXIT_FAILURE;
+			}
+			square_inner_padding = (uint32_t)tmp;
+			break;
+
+		case SQUARE_PADDING:
+			tmp = atoi(optarg);
+			if ( tmp < 0 )
+			{
+				fputs("ERROR: Square padding may not be smaller than 0.\n", stderr);
+				return EXIT_FAILURE;
+			}
+			square_padding = (uint32_t)tmp;
+			break;
+
+		case SQUARE_BORDER_WIDTH:
+			tmp = atoi(optarg);
+			if ( tmp < 0 )
+			{
+				fputs("ERROR: Square border width may not be smaller than 0.\n", stderr);
+				return EXIT_FAILURE;
+			}
+			square_border_width = (uint32_t)tmp;
+			break;
+
+		case BACKGROUND_COLOUR:
+			if (! colour_from_hex(&background_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case BORDER_COLOUR:
+			if (! colour_from_hex(&border_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_ACTIVE_BACKGROUND_COLOUR:
+			if (! colour_from_hex(&inactive_square_background_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_ACTIVE_BORDER_COLOUR:
+			if (! colour_from_hex(&active_square_background_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_ACTIVE_OCCUPIED_COLOUR:
+			if (! colour_from_hex(&inactive_square_border_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_INACTIVE_BACKGROUND_COLOUR:
+			if (! colour_from_hex(&active_square_border_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_INACTIVE_BORDER_COLOUR:
+			if (! colour_from_hex(&inactive_square_occupied_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_INACTIVE_OCCUPIED_COLOUR:
+			if (! colour_from_hex(&active_square_occupied_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		default:
+			return EXIT_FAILURE;
+	}
+
+	surface_width = (tag_amount * (square_size + square_padding)) + square_padding + (2 * border_width);
+	surface_height = square_size + (2 * square_padding) + (2 * border_width);
 
 	/* We query the display name here instead of letting wl_display_connect()
 	 * figure it out itself, because libwayland (for legacy reasons) falls
@@ -738,8 +909,8 @@ int main (int argc, char *argv[])
 
 	close(pollfds[0].fd);
 
-	struct Output *output, *tmp;
-	wl_list_for_each_safe(output, tmp, &outputs, link)
+	struct Output *output, *otmp;
+	wl_list_for_each_safe(output, otmp, &outputs, link)
 		destroy_output(output);
 
 	if ( wl_compositor != NULL )
