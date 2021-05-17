@@ -65,6 +65,7 @@ uint32_t border_width = 2;
 uint32_t tag_amount = 9;
 uint32_t square_size = 40;
 uint32_t square_padding = 15;
+uint32_t square_border_width = 1;
 uint32_t square_inner_padding = 10;
 
 uint32_t surface_width;
@@ -341,35 +342,47 @@ static void render_frame (struct Output *output)
 
 	/* Tags. */
 	#define TAG_ON(A, B) ( A & 1 << B )
-	pixman_color_t unfocused_tag_background_colour = pixman_colour_from_rgba(0.6, 0.6, 0.6, 1.0);
-	pixman_color_t focused_tag_background_colour = pixman_colour_from_rgba(0.9, 0.5, 0.23, 1.0);
-	pixman_color_t unfocused_tag_occupied_colour = pixman_colour_from_rgba(0.8, 0.8, 0.8, 1.0);
-	pixman_color_t focused_tag_occupied_colour = pixman_colour_from_rgba(1.0, 0.7, 0.43, 1.0);
+	pixman_color_t inactive_square_background_colour = pixman_colour_from_rgba(0.6, 0.6, 0.6, 1.0);
+	pixman_color_t active_square_background_colour   = pixman_colour_from_rgba(0.9, 0.5, 0.23, 1.0);
+	pixman_color_t inactive_square_border_colour     = pixman_colour_from_rgba(0.5, 0.5, 0.5, 1.0);
+	pixman_color_t active_square_border_colour       = pixman_colour_from_rgba(0.7, 0.3, 0.13, 1.0);
+	pixman_color_t inactive_square_occupied_colour   = pixman_colour_from_rgba(0.8, 0.8, 0.8, 1.0);
+	pixman_color_t active_square_occupied_colour     = pixman_colour_from_rgba(1.0, 0.7, 0.43, 1.0);
 	for (uint32_t i = 0; i < tag_amount; i++)
 	{
-		const pixman_rectangle16_t box = (pixman_rectangle16_t){
-			(int16_t)((border_width + ((i+1) * square_padding) + (i * square_size)) * output->scale),
-			(int16_t)((border_width + square_padding) * output->scale),
-			(uint16_t)(square_size * output->scale),
-			(uint16_t)(square_size * output->scale) 
-		};
-		pixman_image_fill_rectangles(PIXMAN_OP_SRC, buffer->pixman_image,
-				TAG_ON(output->focused_tags, i)
-				? &focused_tag_background_colour
-				: &unfocused_tag_background_colour, 1, &box);
+		pixman_color_t *square_background_colour;
+		pixman_color_t *square_border_colour;
+		pixman_color_t *square_occupied_colour;
+		if (TAG_ON(output->focused_tags, i))
+		{
+			square_background_colour = &active_square_background_colour;
+			square_border_colour     = &active_square_border_colour;
+			square_occupied_colour   = &active_square_occupied_colour;
+		}
+		else
+		{
+			square_background_colour = &inactive_square_background_colour;
+			square_border_colour     = &inactive_square_border_colour;
+			square_occupied_colour   = &inactive_square_occupied_colour;
+		}
+
+		const uint32_t x = border_width + ((i+1) * square_padding) + (i * square_size);
+		const uint32_t y = border_width + square_padding;
+
+		bordered_rectangle(buffer->pixman_image, x, y,
+				square_size, square_size,
+				square_border_width, output->scale,
+				square_background_colour, square_border_colour);
 
 		if (TAG_ON(output->view_tags, i))
 		{
-			pixman_image_fill_rectangles(PIXMAN_OP_SRC, buffer->pixman_image,
-					TAG_ON(output->focused_tags, i)
-					? &focused_tag_occupied_colour
-					: &unfocused_tag_occupied_colour, 1,
-					&(pixman_rectangle16_t){
-						box.x + (int16_t)square_inner_padding,
-						box.y + (int16_t)square_inner_padding,
-						(uint16_t)(box.width - 2 * square_inner_padding),
-						(uint16_t)(box.height - 2 * square_inner_padding),
-					});
+			bordered_rectangle(buffer->pixman_image,
+					x + square_inner_padding,
+					y + square_inner_padding,
+					square_size - 2 * square_inner_padding,
+					square_size - 2 * square_inner_padding,
+					square_border_width, output->scale,
+					square_occupied_colour, square_border_colour);
 		}
 	}
 	#undef TAG_ON
