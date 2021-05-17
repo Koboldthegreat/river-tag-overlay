@@ -71,6 +71,15 @@ uint32_t square_inner_padding = 10;
 uint32_t surface_width;
 uint32_t surface_height;
 
+pixman_color_t background_colour;
+pixman_color_t border_colour;
+pixman_color_t inactive_square_background_colour;
+pixman_color_t active_square_background_colour;
+pixman_color_t inactive_square_border_colour;
+pixman_color_t active_square_border_colour;
+pixman_color_t inactive_square_occupied_colour;
+pixman_color_t active_square_occupied_colour;
+
 /************
  *          *
  *  Buffer  *
@@ -258,21 +267,6 @@ static struct Buffer *next_buffer (struct Surface *surface, uint32_t width, uint
  *  Surface  *
  *           *
  *************/
-static pixman_color_t pixman_colour_from_rgba (double _r, double _g, double _b, double _a)
-{
-	const uint16_t r = (uint16_t)(_r * 65535.0);
-	const uint16_t g = (uint16_t)(_g * 65535.0);
-	const uint16_t b = (uint16_t)(_b * 65535.0);
-	const uint16_t a = (uint16_t)(_a * 65535.0);
-
-	return (pixman_color_t){
-		.red   = (uint16_t)((uint32_t)r * a / 0xffff),
-		.green = (uint16_t)((uint32_t)g * a / 0xffff),
-		.blue  = (uint16_t)((uint32_t)b * a / 0xffff),
-		.alpha = a,
-	};
-}
-
 static void bordered_rectangle (pixman_image_t *image, uint32_t x, uint32_t y,
 		uint32_t width, uint32_t height, uint32_t border, uint32_t scale,
 		pixman_color_t *background_colour, pixman_color_t *border_colour)
@@ -335,19 +329,11 @@ static void render_frame (struct Output *output)
 	if ( buffer == NULL )
 		return;
 
-	pixman_color_t background_colour = pixman_colour_from_rgba(0.4, 0.4, 0.4, 1.0);
-	pixman_color_t border_colour = pixman_colour_from_rgba(0.2, 0.2, 0.2, 1.0);
 	bordered_rectangle(buffer->pixman_image, 0, 0, buffer->width, buffer->height,
 			border_width, output->scale, &background_colour, &border_colour);
 
 	/* Tags. */
 	#define TAG_ON(A, B) ( A & 1 << B )
-	pixman_color_t inactive_square_background_colour = pixman_colour_from_rgba(0.6, 0.6, 0.6, 1.0);
-	pixman_color_t active_square_background_colour   = pixman_colour_from_rgba(0.9, 0.5, 0.23, 1.0);
-	pixman_color_t inactive_square_border_colour     = pixman_colour_from_rgba(0.5, 0.5, 0.5, 1.0);
-	pixman_color_t active_square_border_colour       = pixman_colour_from_rgba(0.7, 0.3, 0.13, 1.0);
-	pixman_color_t inactive_square_occupied_colour   = pixman_colour_from_rgba(0.8, 0.8, 0.8, 1.0);
-	pixman_color_t active_square_occupied_colour     = pixman_colour_from_rgba(1.0, 0.7, 0.43, 1.0);
 	for (uint32_t i = 0; i < tag_amount; i++)
 	{
 		pixman_color_t *square_background_colour;
@@ -622,12 +608,37 @@ static void timespec_diff (struct timespec *a, struct timespec *b, struct timesp
 	}
 }
 
+static bool colour_from_hex (pixman_color_t *colour, const char *hex)
+{
+	uint16_t r = 0, g = 0, b = 0, a = 255;
+
+	if ( 4 != sscanf(hex, "0x%02hx%02hx%02hx%02hx", &r, &g, &b, &a)
+			&& 3 != sscanf(hex, "0x%02hx%02hx%02hx", &r, &g, &b) )
+		return false;
+
+	colour->alpha = (uint16_t)(((double)a / 255.0) * 65535.0);
+	colour->red   = (uint16_t)((((double)r / 255.0) * 65535.0) * colour->alpha / 0xffff);
+	colour->green = (uint16_t)((((double)g / 255.0) * 65535.0) * colour->alpha / 0xffff);
+	colour->blue  = (uint16_t)((((double)b / 255.0) * 65535.0) * colour->alpha / 0xffff);
+
+	return true;
+}
+
 int main (int argc, char *argv[])
 {
 	// TODO handle opts
 
 	surface_width = (tag_amount * (square_size + square_padding)) + square_padding + (2 * border_width);
 	surface_height = square_size + (2 * square_padding) + (2 * border_width);
+
+	colour_from_hex(&background_colour, "0x666666");
+	colour_from_hex(&border_colour, "0x333333");
+	colour_from_hex(&inactive_square_background_colour, "0x999999");
+	colour_from_hex(&active_square_background_colour, "0xE6803A");
+	colour_from_hex(&inactive_square_border_colour, "0x7F7F7F");
+	colour_from_hex(&active_square_border_colour, "0xB24C21");
+	colour_from_hex(&inactive_square_occupied_colour, "0xCCCCCC");
+	colour_from_hex(&active_square_occupied_colour, "0xFFB277");
 
 	/* We query the display name here instead of letting wl_display_connect()
 	 * figure it out itself, because libwayland (for legacy reasons) falls
