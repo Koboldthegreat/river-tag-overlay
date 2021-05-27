@@ -692,13 +692,12 @@ int main (int argc, char *argv[])
 		{ "square-inactive-background-colour", required_argument, NULL, SQUARE_INACTIVE_BACKGROUND_COLOUR },
 		{ "square-inactive-border-colour",     required_argument, NULL, SQUARE_INACTIVE_BORDER_COLOUR     },
 		{ "square-inactive-occupied-colour",   required_argument, NULL, SQUARE_INACTIVE_OCCUPIED_COLOUR   },
+		{ NULL,                                0,                 NULL, 0                                 },
 	};
 
 	int opt;
-	extern int optind;
-	extern char *optarg;
 	int32_t tmp;
-	while ( (opt = getopt_long(argc, argv, "h", opts, &optind)) != -1 ) switch (opt)
+	while ( (opt = getopt_long(argc, argv, "h", opts, NULL)) != -1 ) switch (opt)
 	{
 		case 'h':
 			fputs(usage, stderr);
@@ -775,32 +774,32 @@ int main (int argc, char *argv[])
 			break;
 
 		case SQUARE_ACTIVE_BACKGROUND_COLOUR:
-			if (! colour_from_hex(&inactive_square_background_colour, optarg))
-				return EXIT_FAILURE;
-			break;
-
-		case SQUARE_ACTIVE_BORDER_COLOUR:
 			if (! colour_from_hex(&active_square_background_colour, optarg))
 				return EXIT_FAILURE;
 			break;
 
-		case SQUARE_ACTIVE_OCCUPIED_COLOUR:
-			if (! colour_from_hex(&inactive_square_border_colour, optarg))
-				return EXIT_FAILURE;
-			break;
-
-		case SQUARE_INACTIVE_BACKGROUND_COLOUR:
+		case SQUARE_ACTIVE_BORDER_COLOUR:
 			if (! colour_from_hex(&active_square_border_colour, optarg))
 				return EXIT_FAILURE;
 			break;
 
+		case SQUARE_ACTIVE_OCCUPIED_COLOUR:
+			if (! colour_from_hex(&active_square_occupied_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_INACTIVE_BACKGROUND_COLOUR:
+			if (! colour_from_hex(&inactive_square_background_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
 		case SQUARE_INACTIVE_BORDER_COLOUR:
-			if (! colour_from_hex(&inactive_square_occupied_colour, optarg))
+			if (! colour_from_hex(&inactive_square_border_colour, optarg))
 				return EXIT_FAILURE;
 			break;
 
 		case SQUARE_INACTIVE_OCCUPIED_COLOUR:
-			if (! colour_from_hex(&active_square_occupied_colour, optarg))
+			if (! colour_from_hex(&inactive_square_occupied_colour, optarg))
 				return EXIT_FAILURE;
 			break;
 
@@ -809,7 +808,7 @@ int main (int argc, char *argv[])
 	}
 
 	if ( 2 * square_inner_padding >= 0.9 * square_size )
-	{ 
+	{
 		fputs("ERROR: Inner square padding too large for square size.\n", stderr);
 		return EXIT_FAILURE;
 	}
