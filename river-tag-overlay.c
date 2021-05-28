@@ -6,7 +6,6 @@
 #include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -20,20 +19,22 @@
 
 const char usage[] =
 	"Usage: river-tag-overlay [options...]\n"
-	"   --border-width                      <int>   Width of the widget border\n"
-	"   --tag-amount                        <int>   Amount of displayed tags (1 to 32)\n"
-	"   --square-size                       <int>   Size of tag squares\n"
-	"   --square-inner-padding              <int>   Padding around the tag occupied indicator\n"
-	"   --square-padding                    <int>   Padding around tag squares\n"
-	"   --square-border-width               <int>   Border width of the tag squares\n"
-	"   --background-colour                 <hex>   Widget background colour\n"
-	"   --border-colour                     <hex>   Widget border colour\n"
-	"   --square-active-background-colour   <hex>   Background colour of active tag squares\n"
-	"   --square-active-border-colour       <hex>   Border colour of active tag squares\n"
-	"   --square-active-occupied-colour     <hex>   Occupied indicator colour of active tag squares\n"
-	"   --square-inactive-background-colour <hex>   Background colour of inactive tag squares\n"
-	"   --square-inactive-border-colour     <hex>   Border colour of inactive tag squares\n"
-	"   --square-inactive-occupied-colour   <hex>   Occupied indicator colour of inactive tag squares\n"
+	"   --border-width                      <int>                     Width of the widget border\n"
+	"   --tag-amount                        <int>                     Amount of displayed tags (1 to 32)\n"
+	"   --square-size                       <int>                     Size of tag squares\n"
+	"   --square-inner-padding              <int>                     Padding around the tag occupied indicator\n"
+	"   --square-padding                    <int>                     Padding around tag squares\n"
+	"   --square-border-width               <int>                     Border width of the tag squares\n"
+	"   --background-colour                 <hex>                     Widget background colour\n"
+	"   --border-colour                     <hex>                     Widget border colour\n"
+	"   --square-active-background-colour   <hex>                     Background colour of active tag squares\n"
+	"   --square-active-border-colour       <hex>                     Border colour of active tag squares\n"
+	"   --square-active-occupied-colour     <hex>                     Occupied indicator colour of active tag squares\n"
+	"   --square-inactive-background-colour <hex>                     Background colour of inactive tag squares\n"
+	"   --square-inactive-border-colour     <hex>                     Border colour of inactive tag squares\n"
+	"   --square-inactive-occupied-colour   <hex>                     Occupied indicator colour of inactive tag squares\n"
+	"   --anchors                           <int>:<int>:<int>:<int>   Directional anchors top, right bottom, left; 1 for on, 0 for off\n"
+	"   --margins                           <int>:<int>:<int>:<int>   Directional margins top, right bottom, left\n"
 	"\n";
 
 struct Buffer
@@ -89,6 +90,13 @@ uint32_t square_inner_padding = 10;
 
 uint32_t surface_width;
 uint32_t surface_height;
+
+enum zwlr_layer_surface_v1_anchor surface_anchors = 0;
+
+uint32_t margin_top = 0;
+uint32_t margin_right = 0;
+uint32_t margin_bottom = 0;
+uint32_t margin_left = 0;
 
 pixman_color_t background_colour;
 pixman_color_t border_colour;
@@ -461,6 +469,11 @@ static void update_surface (struct Output *output)
 			&layer_surface_listener, output);
 	zwlr_layer_surface_v1_set_size(output->surface->layer_surface,
 			surface_width, surface_height);
+	zwlr_layer_surface_v1_set_anchor(output->surface->layer_surface,
+			surface_anchors);
+	zwlr_layer_surface_v1_set_margin(output->surface->layer_surface,
+			(int32_t)margin_top, (int32_t)margin_right,
+			(int32_t)margin_bottom, (int32_t)margin_left);
 
 	struct wl_region *region = wl_compositor_create_region(wl_compositor);
 	wl_surface_set_input_region(output->surface->wl_surface, region);
@@ -646,6 +659,39 @@ static bool colour_from_hex (pixman_color_t *colour, const char *hex)
 	return true;
 }
 
+static bool parse_anchors (const char *str)
+{
+	uint32_t top, right, bottom, left;
+	if ( 4 != sscanf(str, "%u:%u:%u:%u", &top, &right, &bottom, &left) )
+	{
+		fprintf(stderr, "ERROR: Invalid anchor configuration: %s\n", str);
+		return false;
+	}
+
+	if ( top > 0 )
+		surface_anchors |= ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP;
+	if ( right > 0 )
+		surface_anchors |= ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT;
+	if ( bottom > 0 )
+		surface_anchors |= ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM;
+	if ( left > 0 )
+		surface_anchors |= ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT;
+
+	return true;
+}
+
+static bool parse_margins (const char *str)
+{
+	if ( 4 != sscanf(str, "%u:%u:%u:%u", &margin_top, &margin_right,
+				&margin_bottom, &margin_left) )
+	{
+		fprintf(stderr, "ERROR: Invalid margin configuration: %s\n", str);
+		return false;
+	}
+
+	return true;
+}
+
 int main (int argc, char *argv[])
 {
 	/* Default colours.*/
@@ -674,6 +720,8 @@ int main (int argc, char *argv[])
 		SQUARE_INACTIVE_BACKGROUND_COLOUR,
 		SQUARE_INACTIVE_BORDER_COLOUR,
 		SQUARE_INACTIVE_OCCUPIED_COLOUR,
+		ANCHORS,
+		MARGINS,
 	};
 
 	static struct option opts[] = {
@@ -692,6 +740,8 @@ int main (int argc, char *argv[])
 		{ "square-inactive-background-colour", required_argument, NULL, SQUARE_INACTIVE_BACKGROUND_COLOUR },
 		{ "square-inactive-border-colour",     required_argument, NULL, SQUARE_INACTIVE_BORDER_COLOUR     },
 		{ "square-inactive-occupied-colour",   required_argument, NULL, SQUARE_INACTIVE_OCCUPIED_COLOUR   },
+		{ "anchors",                           required_argument, NULL, ANCHORS                           },
+		{ "margins",                           required_argument, NULL, MARGINS                           },
 		{ NULL,                                0,                 NULL, 0                                 },
 	};
 
@@ -800,6 +850,16 @@ int main (int argc, char *argv[])
 
 		case SQUARE_INACTIVE_OCCUPIED_COLOUR:
 			if (! colour_from_hex(&inactive_square_occupied_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case ANCHORS:
+			if (! parse_anchors(optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case MARGINS:
+			if (! parse_margins(optarg))
 				return EXIT_FAILURE;
 			break;
 
