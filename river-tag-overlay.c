@@ -927,7 +927,7 @@ int main (int argc, char *argv[])
 			const long epsilon = 1000000;
  			struct timespec time_since_last_frame;
 			timespec_diff(&now, &output->surface->last_frame, &time_since_last_frame);
-			if ( time_since_last_frame.tv_sec > 1 || time_since_last_frame.tv_nsec >= nsec_half_second - epsilon )
+			if ( time_since_last_frame.tv_sec > 0 || time_since_last_frame.tv_nsec >= nsec_half_second - epsilon )
 			{
 				destroy_surface(output->surface);
 				output->surface = NULL;
