@@ -1,0 +1,133 @@
+.TH river-tag-overlay 1 2021-06-13 river-tag-overlay-0.0.0
+
+.SH NAME
+river-tag-overlay - A tag state pop-up for river
+
+.SH SYNOPSIS
+river-tag-overlay [options...]
+
+.SH DESCRIPTION
+A tool for the river Wayland compositor that will show a pop-up with symbolic
+information about the currently focused and occupied tags whenever the tag focus
+changes. After half a second the pop-up will disappear again.
+
+.SH OPTIONS
+\fB-h\fR, \fB--help\fR
+.RS 4
+Print help text and exit.
+.P
+.RE
+
+\fB--border-width\fR
+.RS 4
+Width of the widget border. Defaults to 2.
+.RE
+
+\fB--tag-amount\fR
+.RS 4
+Amount of displayed tags. This configured how many of rivers 32 tags you are
+interested in, starting at the beginning. Defaults to 9.
+.P
+.RE
+
+\fB--square-size\fR
+.RS 4
+Size of tag squares. Defaults to 40.
+.RE
+
+\fB--square-inner-padding\fR
+.RS 4
+Padding around the tag occupied indicator. Defaults to 10.
+.RE
+
+\fB--square-padding\fR
+.RS 4
+Padding around the tag squares. Defaults to 15.
+.RE
+
+\fB--square-border-width\fR
+.RS 4
+Border width of the tag squares. Defaults to 1.
+.RE
+
+\fB--background-colour\fR
+.RS 4
+Widget background colour. Defaults to 0x666666.
+.RE
+
+\fB--border-colour\fR
+.RS 4
+Widget border colour. Defaults to 0x333333
+.RE
+
+\fB--square-active-background-colour\fR
+.RS 4
+Background colour of active tag squares. Defaults to 0xE6803A.
+.RE
+
+\fB--square-active-border-colour\fR
+.RS 4
+Border colour of active tag squares. Defaults to 0xB24C21.
+.RE
+
+\fB--square-active-occupied-colour\fR
+.RS 4
+Occupied indicator colour of active tag squares. Defaults to 0xFFB277.
+.RE
+
+\fB--square-inactive-background-colour\fR
+.RS 4
+Background colour of inactive tag squares. Defaults to 0x999999.
+.RE
+
+\fB--square-inactive-border-colour\fR
+.RS 4
+Border colour of inactive tag squares. Defaults to 0x7F7F7F.
+.RE
+
+\fB--square-inactive-occupied-colour\fR
+.RS 4
+Occupied indicator colour of inactive tag squares. Defaults to 0xCCCCCC.
+.RE
+
+\fB--anchors\fR
+.RS 4
+Set the directional anchors using the following format.
+.P
+.nf
+.RS 4
+<top>:<right>:<bottom>:<left>
+.fi
+.RE
+.P
+Activate an anchor with 1 and deactivate with 0. By default all anchors are
+inactive.
+.RE
+
+\fB--margins\fR
+.RS 4
+Set the directional margins using the following format.
+.P
+.nf
+.RS 4
+<top>:<right>:<bottom>:<left>
+.fi
+.RE
+.P
+By default all margins are 0.
+.RE
+
+.SH COLOURS
+For colours river-tag-overlay expects hex colour codes of the following format.
+.P
+.nf
+.RS 4
+0xRRGGBB
+.fi
+.RE
+.P
+
+.SH AUTHOR
+Leon Henrik Plickat
+.P
+

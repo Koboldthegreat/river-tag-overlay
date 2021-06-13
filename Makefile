@@ -2,6 +2,7 @@ SCANNER := wayland-scanner
 
 PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
+MANDIR=$(PREFIX)/share/man
 
 CFLAGS=-Wall -Werror -Wextra -Wpedantic -Wno-unused-parameter -Wconversion $(shell pkg-config --cflags pixman-1)
 LIBS=-lwayland-client $(shell pkg-config --libs pixman-1) -lrt
@@ -20,10 +21,12 @@ $(OBJ): $(GEN)
 	$(SCANNER) client-header < $< > $@
 
 install: river-tag-overlay
-	install -D river-tag-overlay $(DESTDIR)$(BINDIR)/river-tag-overlay
+	install -D river-tag-overlay   $(DESTDIR)$(BINDIR)/river-tag-overlay
+	install -D river-tag-overlay.1 $(DESTDIR)$(MANDIR)/man1/river-tag-overlay.1
 
 uninstall:
 	$(RM) $(DESTDIR)$(BINDIR)/river-tag-overlay
+	$(RM) $(DESTDIR)$(MANDIR)/man1/river-tag-overlay.1
 
 clean:
 	$(RM) river-tag-overlay $(GEN) $(OBJ)
