@@ -1,0 +1,5 @@
+river-tag-overlay - A pop-up showing tag status
+
+A tool for the river Wayland compositor that will show a pop-up with symbolic
+information about the currently focused and occupied tags whenever the tag focus
+changes.
