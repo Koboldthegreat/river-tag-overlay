@@ -1,0 +1,8 @@
+*.o
+xdg-shell.h
+xdg-shell.c
+wlr-layer-shell-unstable-v1.h
+wlr-layer-shell-unstable-v1.c
+river-status-unstable-v1.h
+river-status-unstable-v1.c
+river-tag-overlay
