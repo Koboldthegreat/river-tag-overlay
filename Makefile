@@ -10,7 +10,7 @@ OBJ=river-tag-overlay.o river-status-unstable-v1.o wlr-layer-shell-unstable-v1.o
 GEN=river-status-unstable-v1.c river-status-unstable-v1.h wlr-layer-shell-unstable-v1.c wlr-layer-shell-unstable-v1.h xdg-shell.c xdg-shell.h
 
 river-tag-overlay: $(OBJ)
-	$(CC)$ $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
 
 $(OBJ): $(GEN)
 
