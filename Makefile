@@ -4,7 +4,7 @@ PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 MANDIR=$(PREFIX)/share/man
 
-CFLAGS=-Wall -Werror -Wextra -Wpedantic -Wno-unused-parameter -Wconversion $(shell pkg-config --cflags pixman-1)
+CFLAGS=-Wall -Werror -Wextra -Wpedantic -Wno-unused-parameter -Wconversion -Wformat-security -Wformat -Wsign-conversion -Wfloat-conversion -Wunused-result $(shell pkg-config --cflags pixman-1)
 LIBS=-lwayland-client $(shell pkg-config --libs pixman-1) -lrt
 OBJ=river-tag-overlay.o river-status-unstable-v1.o wlr-layer-shell-unstable-v1.o xdg-shell.o
 GEN=river-status-unstable-v1.c river-status-unstable-v1.h wlr-layer-shell-unstable-v1.c wlr-layer-shell-unstable-v1.h xdg-shell.c xdg-shell.h
