@@ -1,0 +1,12 @@
+image: archlinux
+packages:
+  - pixman
+  - wayland
+  - wayland-protocols
+sources:
+  - https://git.sr.ht/~leon_plickat/river-tag-overlay
+tasks:
+  - build: |
+      cd river-tag-overlay
+      make
+
