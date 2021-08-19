@@ -560,7 +560,7 @@ static void registry_handle_global (void *data, struct wl_registry *registry,
 			return;
 		}
 
-		output->wl_output = wl_registry_bind(registry, name, &wl_output_interface, version);
+		output->wl_output = wl_registry_bind(registry, name, &wl_output_interface, 3);
 		output->global_name = name;
 		output->surface = NULL;
 		wl_output_set_user_data(output->wl_output, output);
@@ -571,13 +571,13 @@ static void registry_handle_global (void *data, struct wl_registry *registry,
 			configure_output(output);
 	}
 	else if ( strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0 )
-		layer_shell = wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, version);
+		layer_shell = wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
 	else if ( strcmp(interface, zriver_status_manager_v1_interface.name) == 0 )
-		river_status_manager = wl_registry_bind(registry, name, &zriver_status_manager_v1_interface, version);
+		river_status_manager = wl_registry_bind(registry, name, &zriver_status_manager_v1_interface, 1);
 	else if ( strcmp(interface, wl_compositor_interface.name) == 0 )
-		wl_compositor = wl_registry_bind(registry, name, &wl_compositor_interface, version);
+		wl_compositor = wl_registry_bind(registry, name, &wl_compositor_interface, 4);
 	else if ( strcmp(interface, wl_shm_interface.name) == 0 )
-		wl_shm = wl_registry_bind(registry, name, &wl_shm_interface, version);
+		wl_shm = wl_registry_bind(registry, name, &wl_shm_interface, 1);
 }
 
 static void registry_handle_global_remove (void *data, struct wl_registry *registry, uint32_t name)
