@@ -21,6 +21,9 @@ river-tag-overlay \- a tag state pop-up for river
 .OP \-\-square\-inactive\-background\-colour hex\-colour
 .OP \-\-square\-inactive\-border\-colour hex\-colour
 .OP \-\-square\-inactive\-occupied\-colour hex\-colour
+.OP \-\-square\-urgent\-background\-colour hex\-colour
+.OP \-\-square\-urgent\-border\-colour hex\-colour
+.OP \-\-square\-urgent\-occupied\-colour hex\-colour
 .OP \-\-anchors top\ right\ left\ bottom
 .OP \-\-margins top\ right\ left\ bottom
 .YS
@@ -150,6 +153,27 @@ Defaults to 0x7F7F7F.
 .RS
 Occupied indicator colour of inactive tag squares.
 Defaults to 0xCCCCCC.
+.RE
+.
+.P
+\fB--square-urgent-background-colour\fR \fIhex-colour\fR
+.RS
+Background colour of urgent tag squares.
+Defaults to 0xEA2113.
+.RE
+.
+.P
+\fB--square-urgent-border-colour\fR \fIhex-colour\fR
+.RS
+Border colour of urgent tag squares.
+Defaults to 0xC11414.
+.RE
+.
+.P
+\fB--square-urgent-occupied-colour\fR \fIhex-colour\fR
+.RS
+Occupied indicator colour of urgent tag squares.
+Defaults to 0xFF6B56.
 .RE
 .
 .P

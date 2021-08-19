@@ -33,6 +33,9 @@ const char usage[] =
 	"   --square-inactive-background-colour <hex>                     Background colour of inactive tag squares\n"
 	"   --square-inactive-border-colour     <hex>                     Border colour of inactive tag squares\n"
 	"   --square-inactive-occupied-colour   <hex>                     Occupied indicator colour of inactive tag squares\n"
+	"   --square-urgent-background-colour   <hex>                     Background colour of urgent tag squares\n"
+	"   --square-urgent-border-colour       <hex>                     Border colour of urgent tag squares\n"
+	"   --square-urgent-occupied-colour     <hex>                     Occupied indicator colour of urgent tag squares\n"
 	"   --anchors                           <int>:<int>:<int>:<int>   Directional anchors top, right bottom, left; 1 for on, 0 for off\n"
 	"   --margins                           <int>:<int>:<int>:<int>   Directional margins top, right bottom, left\n"
 	"\n";
@@ -65,7 +68,7 @@ struct Output
 	uint32_t global_name;
 	struct Surface *surface;
 	struct zriver_output_status_v1 *river_status;
-	uint32_t focused_tags, view_tags;
+	uint32_t focused_tags, view_tags, urgent_tags;
 	uint32_t scale; // TODO
 	bool configured;
 };
@@ -100,12 +103,19 @@ uint32_t margin_left = 0;
 
 pixman_color_t background_colour;
 pixman_color_t border_colour;
-pixman_color_t inactive_square_background_colour;
+
 pixman_color_t active_square_background_colour;
-pixman_color_t inactive_square_border_colour;
-pixman_color_t active_square_border_colour;
-pixman_color_t inactive_square_occupied_colour;
 pixman_color_t active_square_occupied_colour;
+pixman_color_t active_square_border_colour;
+
+pixman_color_t inactive_square_background_colour;
+pixman_color_t inactive_square_border_colour;
+pixman_color_t inactive_square_occupied_colour;
+
+pixman_color_t urgent_square_background_colour;
+pixman_color_t urgent_square_border_colour;
+pixman_color_t urgent_square_occupied_colour;
+
 
 /************
  *          *
@@ -372,6 +382,12 @@ static void render_frame (struct Output *output)
 			square_border_colour     = &active_square_border_colour;
 			square_occupied_colour   = &active_square_occupied_colour;
 		}
+		else if (TAG_ON(output->urgent_tags, i))
+		{
+			square_background_colour = &urgent_square_background_colour;
+			square_border_colour     = &urgent_square_border_colour;
+			square_occupied_colour   = &urgent_square_occupied_colour;
+		}
 		else
 		{
 			square_background_colour = &inactive_square_background_colour;
@@ -509,9 +525,29 @@ static void river_status_handle_view_tags (void *data, struct zriver_output_stat
 		update_surface(output);
 }
 
+static void river_status_handle_urgent_tags (void *data, struct zriver_output_status_v1 *river_status,
+		uint32_t tags)
+{
+	struct Output *output = (struct Output *)data;
+	const uint32_t old_urgent_tags = output->urgent_tags;
+	output->urgent_tags = tags;
+
+	/* Only display pop-up if the urgent tags are not focused already. */
+	if ( output->urgent_tags != output->focused_tags )
+	{
+		/* Only display pop-up if there are new urgent tags, not if an
+		 * old one just expired.
+		 */
+		const uint32_t diff = old_urgent_tags ^ output->urgent_tags;
+		if ( (diff & output->urgent_tags) > 0 )
+			update_surface(output);
+	}
+}
+
 static const struct zriver_output_status_v1_listener river_status_listener = {
 	.focused_tags = river_status_handle_focused_tags,
-	.view_tags    = river_status_handle_view_tags
+	.view_tags    = river_status_handle_view_tags,
+	.urgent_tags  = river_status_handle_urgent_tags,
 };
 
 static void destroy_output (struct Output *output)
@@ -573,7 +609,7 @@ static void registry_handle_global (void *data, struct wl_registry *registry,
 	else if ( strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0 )
 		layer_shell = wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
 	else if ( strcmp(interface, zriver_status_manager_v1_interface.name) == 0 )
-		river_status_manager = wl_registry_bind(registry, name, &zriver_status_manager_v1_interface, 1);
+		river_status_manager = wl_registry_bind(registry, name, &zriver_status_manager_v1_interface, 2);
 	else if ( strcmp(interface, wl_compositor_interface.name) == 0 )
 		wl_compositor = wl_registry_bind(registry, name, &wl_compositor_interface, 4);
 	else if ( strcmp(interface, wl_shm_interface.name) == 0 )
@@ -697,12 +733,18 @@ int main (int argc, char *argv[])
 	/* Default colours.*/
 	colour_from_hex(&background_colour, "0x666666");
 	colour_from_hex(&border_colour, "0x333333");
-	colour_from_hex(&inactive_square_background_colour, "0x999999");
+
 	colour_from_hex(&active_square_background_colour, "0xE6803A");
-	colour_from_hex(&inactive_square_border_colour, "0x7F7F7F");
 	colour_from_hex(&active_square_border_colour, "0xB24C21");
-	colour_from_hex(&inactive_square_occupied_colour, "0xCCCCCC");
 	colour_from_hex(&active_square_occupied_colour, "0xFFB277");
+
+	colour_from_hex(&inactive_square_background_colour, "0x999999");
+	colour_from_hex(&inactive_square_border_colour, "0x7F7F7F");
+	colour_from_hex(&inactive_square_occupied_colour, "0xCCCCCC");
+
+	colour_from_hex(&urgent_square_background_colour, "0xEA2113");
+	colour_from_hex(&urgent_square_border_colour, "0xC11414");
+	colour_from_hex(&urgent_square_occupied_colour, "0xFF6B56");
 
 	enum
 	{
@@ -720,6 +762,9 @@ int main (int argc, char *argv[])
 		SQUARE_INACTIVE_BACKGROUND_COLOUR,
 		SQUARE_INACTIVE_BORDER_COLOUR,
 		SQUARE_INACTIVE_OCCUPIED_COLOUR,
+		SQUARE_URGENT_BACKGROUND_COLOUR,
+		SQUARE_URGENT_BORDER_COLOUR,
+		SQUARE_URGENT_OCCUPIED_COLOUR,
 		ANCHORS,
 		MARGINS,
 	};
@@ -740,6 +785,9 @@ int main (int argc, char *argv[])
 		{ "square-inactive-background-colour", required_argument, NULL, SQUARE_INACTIVE_BACKGROUND_COLOUR },
 		{ "square-inactive-border-colour",     required_argument, NULL, SQUARE_INACTIVE_BORDER_COLOUR     },
 		{ "square-inactive-occupied-colour",   required_argument, NULL, SQUARE_INACTIVE_OCCUPIED_COLOUR   },
+		{ "square-urgent-background-colour",   required_argument, NULL, SQUARE_URGENT_BACKGROUND_COLOUR   },
+		{ "square-urgent-border-colour",       required_argument, NULL, SQUARE_URGENT_BORDER_COLOUR       },
+		{ "square-urgent-occupied-colour",     required_argument, NULL, SQUARE_URGENT_OCCUPIED_COLOUR     },
 		{ "anchors",                           required_argument, NULL, ANCHORS                           },
 		{ "margins",                           required_argument, NULL, MARGINS                           },
 		{ NULL,                                0,                 NULL, 0                                 },
@@ -850,6 +898,21 @@ int main (int argc, char *argv[])
 
 		case SQUARE_INACTIVE_OCCUPIED_COLOUR:
 			if (! colour_from_hex(&inactive_square_occupied_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_URGENT_BACKGROUND_COLOUR:
+			if (! colour_from_hex(&urgent_square_background_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_URGENT_BORDER_COLOUR:
+			if (! colour_from_hex(&urgent_square_border_colour, optarg))
+				return EXIT_FAILURE;
+			break;
+
+		case SQUARE_URGENT_OCCUPIED_COLOUR:
+			if (! colour_from_hex(&urgent_square_occupied_colour, optarg))
 				return EXIT_FAILURE;
 			break;
 
