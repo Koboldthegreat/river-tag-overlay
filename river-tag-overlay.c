@@ -420,6 +420,7 @@ static void render_frame (struct Output *output)
 	wl_surface_attach(surface->wl_surface, buffer->wl_buffer, 0, 0);
 	wl_surface_damage_buffer(surface->wl_surface, 0, 0,
 			(int32_t)buffer->width, (int32_t)buffer->height);
+	buffer->busy = true;
 
 	clock_gettime(CLOCK_MONOTONIC, &output->surface->last_frame);
 }
