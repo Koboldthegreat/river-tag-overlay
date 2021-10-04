@@ -3,3 +3,8 @@ river-tag-overlay - A pop-up showing tag status
 A tool for the river Wayland compositor that will show a pop-up with symbolic
 information about the currently focused and occupied tags whenever the tag focus
 changes.
+
+*This is a fork*: it includes changes that make it pop-up whenever you switch between outputs,
+this can be useful to keep track of the focused output (active monitor) in a multi-monitor setup
+
+see https://sr.ht/~leon_plickat/river-tag-overlay/ for the original project
