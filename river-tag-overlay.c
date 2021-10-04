@@ -73,6 +73,15 @@ struct Output
 	bool configured;
 };
 
+struct Seat
+{
+	struct wl_list link;
+	struct wl_seat *wl_seat;
+	uint32_t global_name;
+	struct zriver_seat_status_v1 *river_status;
+	bool configured;
+};
+
 int ret = EXIT_SUCCESS;
 bool loop = true;
 struct wl_display *wl_display = NULL;
@@ -83,6 +92,7 @@ struct wl_shm *wl_shm = NULL;
 struct zriver_status_manager_v1 *river_status_manager = NULL;
 struct zwlr_layer_shell_v1 *layer_shell = NULL;
 struct wl_list outputs;
+struct wl_list seats;
 
 uint32_t border_width = 2;
 uint32_t tag_amount = 9;
@@ -504,7 +514,7 @@ static void update_surface (struct Output *output)
  *  Output  *
  *          *
  ************/
-static void river_status_handle_focused_tags (void *data, struct zriver_output_status_v1 *river_status,
+static void river_output_status_handle_focused_tags (void *data, struct zriver_output_status_v1 *river_status,
 		uint32_t tags)
 {
 	struct Output *output = (struct Output *)data;
@@ -512,7 +522,7 @@ static void river_status_handle_focused_tags (void *data, struct zriver_output_s
 	update_surface(output);
 }
 
-static void river_status_handle_view_tags (void *data, struct zriver_output_status_v1 *river_status,
+static void river_output_status_handle_view_tags (void *data, struct zriver_output_status_v1 *river_status,
 		struct wl_array *tags)
 {
 	struct Output *output = (struct Output *)data;
@@ -526,7 +536,7 @@ static void river_status_handle_view_tags (void *data, struct zriver_output_stat
 		update_surface(output);
 }
 
-static void river_status_handle_urgent_tags (void *data, struct zriver_output_status_v1 *river_status,
+static void river_output_status_handle_urgent_tags (void *data, struct zriver_output_status_v1 *river_status,
 		uint32_t tags)
 {
 	struct Output *output = (struct Output *)data;
@@ -545,10 +555,10 @@ static void river_status_handle_urgent_tags (void *data, struct zriver_output_st
 	}
 }
 
-static const struct zriver_output_status_v1_listener river_status_listener = {
-	.focused_tags = river_status_handle_focused_tags,
-	.view_tags    = river_status_handle_view_tags,
-	.urgent_tags  = river_status_handle_urgent_tags,
+static const struct zriver_output_status_v1_listener river_output_status_listener = {
+	.focused_tags = river_output_status_handle_focused_tags,
+	.view_tags    = river_output_status_handle_view_tags,
+	.urgent_tags  = river_output_status_handle_urgent_tags,
 };
 
 static void destroy_output (struct Output *output)
@@ -576,8 +586,59 @@ static void configure_output (struct Output *output)
 	output->river_status = zriver_status_manager_v1_get_river_output_status(
 			river_status_manager, output->wl_output);
 	zriver_output_status_v1_add_listener(output->river_status,
-			&river_status_listener, output);
+			&river_output_status_listener, output);
 	output->configured = true;
+}
+
+/**********
+ *        *
+ *  Seat  *
+ *        *
+ **********/
+static void river_seat_status_handle_focused_output (void *data, struct zriver_seat_status_v1 *seat_status,
+		struct wl_output *wl_output)
+{
+	/* Show surface on newly focused output. */
+	// TODO multi-seat?
+	struct Output *output;
+	wl_list_for_each(output, &outputs, link)
+		if ( output->wl_output == wl_output )
+			update_surface(output);
+}
+
+static void noop ( ) { }
+static const struct zriver_seat_status_v1_listener river_seat_status_listener = {
+	.focused_output   = river_seat_status_handle_focused_output,
+	.unfocused_output = noop, // TODO might be needed, especially for multi-seat
+	.focused_view     = noop,
+};
+
+static struct Seat *seat_from_global_name (uint32_t name)
+{
+	struct Seat *seat;
+	wl_list_for_each(seat, &seats, link)
+		if ( seat->global_name == name )
+			return seat;
+	return NULL;
+}
+
+static void destroy_seat (struct Seat *seat)
+{
+	if ( seat->river_status != NULL )
+		zriver_seat_status_v1_destroy(seat->river_status);
+	wl_seat_destroy(seat->wl_seat);
+	wl_list_remove(&seat->link);
+	free(seat);
+}
+
+
+static void configure_seat (struct Seat *seat)
+{
+	seat->river_status = zriver_status_manager_v1_get_river_seat_status(
+			river_status_manager, seat->wl_seat);
+	zriver_seat_status_v1_add_listener(seat->river_status,
+			&river_seat_status_listener, seat);
+	seat->configured = true;
 }
 
 /**********
@@ -607,6 +668,22 @@ static void registry_handle_global (void *data, struct wl_registry *registry,
 		if ( river_status_manager != NULL )
 			configure_output(output);
 	}
+	else if ( strcmp(interface, wl_seat_interface.name) == 0 ) {
+		struct Seat *seat = calloc(1, sizeof(struct Seat));
+		if (seat == NULL)
+		{
+			fprintf(stderr, "ERROR: calloc: %s.\n", strerror(errno));
+			return;
+		}
+
+		seat->wl_seat = wl_registry_bind(registry, name, &wl_seat_interface, 7);
+		seat->global_name = name;
+		wl_seat_set_user_data(seat->wl_seat, seat);
+		wl_list_insert(&seats, &seat->link);
+
+		if ( river_status_manager != NULL )
+			configure_seat(seat);
+	}
 	else if ( strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0 )
 		layer_shell = wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
 	else if ( strcmp(interface, zriver_status_manager_v1_interface.name) == 0 )
@@ -621,7 +698,17 @@ static void registry_handle_global_remove (void *data, struct wl_registry *regis
 {
 	struct Output *output = output_from_global_name(name);
 	if ( output != NULL )
+	{
 		destroy_output(output);
+		return;
+	}
+
+	struct Seat *seat = seat_from_global_name(name);
+	if ( seat != NULL )
+	{
+		destroy_seat(seat);
+		return;
+	}
 }
 
 static const struct wl_registry_listener registry_listener = {
@@ -660,6 +747,11 @@ static void sync_handle_done (void *data, struct wl_callback *wl_callback, uint3
 	wl_list_for_each(output, &outputs, link)
 		if (! output->configured)
 			configure_output(output);
+
+	struct Seat *seat;
+	wl_list_for_each(seat, &seats, link)
+		if (! seat->configured)
+			configure_seat(seat);
 }
 
 static const struct wl_callback_listener sync_callback_listener = {
@@ -960,6 +1052,7 @@ int main (int argc, char *argv[])
 	}
 
 	wl_list_init(&outputs);
+	wl_list_init(&seats);
 
 	wl_registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(wl_registry, &registry_listener, NULL);
