@@ -1,3 +1,5 @@
+** NOTE: changes in this fork have been upstreamed; archiving as this repo serves no purpose anymore  **
+
 river-tag-overlay - A pop-up showing tag status
 
 A tool for the river Wayland compositor that will show a pop-up with symbolic
